@@ -135,11 +135,12 @@ if len(current_df) > 0:
 
     tab1, tab2 = st.tabs(["Scatter Plot", "Bar Chart Comparison"])
 
+        # TAB 1: SCATTER PLOT (replace your existing with this block)
     with tab1:
         st.subheader("Scatter Plot Settings")
         col1, col2, col3, col4 = st.columns(4)
 
-        # Axis selectors (same behaviour as before)
+        # Axis selectors
         with col1:
             default_x = "G-Value" if "G-Value" in numeric_cols else (numeric_cols[0] if numeric_cols else None)
             x_axis = st.selectbox("X-Axis", numeric_cols, index=numeric_cols.index(default_x) if default_x in numeric_cols else 0, key="scatter_x")
@@ -151,144 +152,136 @@ if len(current_df) > 0:
         with col4:
             show_coating = st.checkbox("Show Coating Labels", value=True)
 
-        # Visual controls
+        # Visual controls (marker color fixed to TT_Orange)
         col5, col6 = st.columns(2)
         with col5:
             point_size = st.slider("Base Point Size", 5, 20, 10)
         with col6:
-            point_color = st.selectbox(
-                "Point Color",
-                options=list(COLORS.keys()),
-                index=list(COLORS.keys()).index('TT_MidBlue')
-            )
+            # fixed color per your request
+            point_color_name = 'TT_Orange'
+            point_color = COLORS[point_color_name]
 
-        # ---- Target lines and highlighting controls ----
-        st.markdown("**Target lines & highlighting**")
+        # Target lines & highlighting controls
+        st.markdown("**Target lines & highlight zone**")
         tcol1, tcol2, tcol3 = st.columns([1, 1, 1])
         with tcol1:
             show_targets = st.checkbox("Show target lines / highlight zone", value=False)
         with tcol2:
             g_target = None
             if "G-Value" in numeric_cols:
-                g_target = st.number_input("G-Value target", min_value=0.0, max_value=1.0, step=0.01, value=0.35 if show_targets else 0.35, key="g_target_input")
+                # default sensible value shown even if checkbox off
+                g_target = st.number_input("G-Value target", min_value=0.0, max_value=1.0, step=0.01, value=0.35, key="g_target_input")
         with tcol3:
             vlt_target = None
             if "VLT (%)" in numeric_cols:
-                vlt_target = st.number_input("VLT (%) target", min_value=0.0, max_value=100.0, step=0.1, value=60.0 if show_targets else 60.0, key="vlt_target_input")
+                vlt_target = st.number_input("VLT (%) target", min_value=0.0, max_value=100.0, step=0.1, value=60.0, key="vlt_target_input")
 
-        # Additional highlight options
-        highlight_size_multiplier = st.slider("Size multiplier for points inside target zone", 1.0, 3.0, 1.5, step=0.1)
-        highlight_color_choice = st.selectbox("Highlight zone fill color", options=["TT_LightLightBlue", "TT_LightBlue"], index=0)
-
-        # Prepare plotting DataFrame and guards
+        # Prepare plotting DataFrame
         plot_df = current_df.dropna(subset=[x_axis, y_axis]).reset_index(drop=True)
         if len(plot_df) > 0:
-            # Compute extents for drawing shapes/lines
+            # compute extents and margins to extend highlight area beyond axes
             x_min, x_max = float(plot_df[x_axis].min()), float(plot_df[x_axis].max())
             y_min, y_max = float(plot_df[y_axis].min()), float(plot_df[y_axis].max())
+            # avoid zero-range margins
+            x_range = (x_max - x_min) if (x_max > x_min) else max(abs(x_min), 1.0)
+            y_range = (y_max - y_min) if (y_max > y_min) else max(abs(y_min), 1.0)
+            margin_x = x_range * 0.10
+            margin_y = y_range * 0.10
 
-            # Create figure
             fig_scatter = go.Figure()
 
-            # If targets enabled and relevant metrics selected, draw rectangle (shaded zone) and dashed lines
+            # Draw target dashed lines in light grey if requested
             if show_targets:
-                # Only draw vertical line if G-Value is relevant to axes (we draw it regardless; it'll be vertical)
                 if g_target is not None:
-                    # vertical dashed line at x = g_target
                     fig_scatter.add_shape(
                         type="line",
                         x0=g_target, x1=g_target,
-                        y0=y_min - (y_max - y_min) * 0.05,  # a bit extra margin
-                        y1=y_max + (y_max - y_min) * 0.05,
-                        line=dict(color=COLORS['TT_DarkBlue'], width=2, dash='dash'),
+                        y0=y_min - margin_y, y1=y_max + margin_y,
+                        line=dict(color=COLORS['TT_LightGrey'], width=2, dash='dash'),
                         xref='x', yref='y'
                     )
-                    # optional annotation label on line
                     fig_scatter.add_annotation(
-                        x=g_target, y=y_max + (y_max - y_min) * 0.07,
+                        x=g_target, y=y_max + margin_y * 0.7,
                         text=f"G target: {g_target}",
                         showarrow=False, yshift=4, font=dict(size=10, color=COLORS['TT_DarkBlue'])
                     )
-                # horizontal dashed line at y = vlt_target
                 if vlt_target is not None:
                     fig_scatter.add_shape(
                         type="line",
-                        x0=x_min - (x_max - x_min) * 0.05,
-                        x1=x_max + (x_max - x_min) * 0.05,
+                        x0=x_min - margin_x, x1=x_max + margin_x,
                         y0=vlt_target, y1=vlt_target,
-                        line=dict(color=COLORS['TT_DarkBlue'], width=2, dash='dash'),
+                        line=dict(color=COLORS['TT_LightGrey'], width=2, dash='dash'),
                         xref='x', yref='y'
                     )
                     fig_scatter.add_annotation(
-                        x=x_max + (x_max - x_min) * 0.02, y=vlt_target,
+                        x=x_max + margin_x * 0.5, y=vlt_target,
                         text=f"VLT target: {vlt_target}",
                         showarrow=False, xshift=6, font=dict(size=10, color=COLORS['TT_DarkBlue'])
                     )
 
-                # If both targets exist, draw shaded rectangle for the zone where x <= g_target and y <= vlt_target
+                # If both targets provided, draw highlight rectangle for: G <= g_target AND VLT >= vlt_target
                 if (g_target is not None) and (vlt_target is not None):
-                    rect_x0 = min(x_min, g_target) - (x_max - x_min) * 0.01
-                    rect_x1 = max(x_min, g_target)
-                    rect_y0 = min(y_min, vlt_target) - (y_max - y_min) * 0.01
-                    rect_y1 = max(y_min, vlt_target)
+                    rect_x0 = x_min - margin_x
+                    rect_x1 = g_target + margin_x
+                    rect_y0 = vlt_target - margin_y
+                    rect_y1 = y_max + margin_y
+                    # ensure proper ordering
+                    rx0, rx1 = min(rect_x0, rect_x1), max(rect_x0, rect_x1)
+                    ry0, ry1 = min(rect_y0, rect_y1), max(rect_y0, rect_y1)
                     fig_scatter.add_shape(
                         type="rect",
-                        x0=rect_x0, x1=rect_x1,
-                        y0=rect_y0, y1=rect_y1,
-                        fillcolor=COLORS[highlight_color_choice],
+                        x0=rx0, x1=rx1,
+                        y0=ry0, y1=ry1,
+                        fillcolor=COLORS['TT_LightBlue'],
                         opacity=0.12,
                         line=dict(width=0),
                         xref='x', yref='y'
                     )
 
-            # To reduce label overlap: cycle through sensible positions
+            # label positions cycle to reduce overlap
             label_positions = [
                 "top center", "bottom center", "middle left", "middle right",
                 "top left", "top right", "bottom left", "bottom right"
             ]
 
-            # Plot each point as its own trace (keeps label control per-point)
+            # Plot each point as separate trace so we can control per-point label position
             for idx, row in plot_df.iterrows():
-                # Decide if point is inside the target zone
                 inside_zone = False
-                if (show_targets and (g_target is not None) and (vlt_target is not None)):
+                if show_targets and (g_target is not None) and (vlt_target is not None):
                     try:
-                        inside_zone = (float(row[x_axis]) <= float(g_target)) and (float(row[y_axis]) <= float(vlt_target))
+                        # zone condition: G (x) <= g_target AND VLT (y) >= vlt_target
+                        inside_zone = (float(row[x_axis]) <= float(g_target)) and (float(row[y_axis]) >= float(vlt_target))
                     except Exception:
                         inside_zone = False
 
-                # Choose marker color and size based on zone membership
+                # pick color and size
                 if inside_zone:
-                    marker_col = COLORS['TT_LightLightBlue']  # use the light color for highlighted points
-                    marker_sz = max(4, int(point_size * highlight_size_multiplier))
+                    marker_col = COLORS['TT_LightBlue']
+                    marker_sz = int(max(4, point_size * 1.5))
                 else:
-                    marker_col = COLORS[point_color]
+                    marker_col = point_color
                     marker_sz = point_size
 
-                # Build hover text
-                hover_text = f"<b>{row.get('Supplier','')}</b><br>"
-                hover_text += f"Coating: {row.get('Coating Name','')}<br>"
-                hover_text += f"Glass: {row.get('Glass Name','')}<br>"
-                hover_text += f"Type: {row.get('Glass Type','')}<br>"
-                hover_text += f"{x_axis}: {row[x_axis]}<br>"
-                hover_text += f"{y_axis}: {row[y_axis]}"
+                # two-line annotation using HTML <br>
+                supplier_txt = str(row.get('Supplier', ''))
+                coating_txt = str(row.get('Coating Name', ''))
+                annotation_text = f"{supplier_txt}<br>{coating_txt}" if (show_supplier or show_coating) else ""
 
-                # Build annotation label text
-                annotation_text = ""
-                if show_supplier:
-                    annotation_text += f"{row.get('Supplier','')}"
-                if show_coating:
-                    if annotation_text:
-                        annotation_text += " — "
-                    annotation_text += f"{row.get('Coating Name','')}"
+                # if user disabled one of the two, still ensure lines: show supplier line if enabled else blank first line
+                if (show_supplier is False) and (show_coating):
+                    annotation_text = f"{''}<br>{coating_txt}"
+                if (show_coating is False) and (show_supplier):
+                    annotation_text = f"{supplier_txt}<br>{''}"
 
-                # Pick a label position cycling by index (simple heuristic to reduce overlap)
+                textmode = 'markers+text' if (show_supplier or show_coating) else 'markers'
                 textpos = label_positions[idx % len(label_positions)] if (show_supplier or show_coating) else ""
+
+                hover_text = f"<b>{supplier_txt}</b><br>Coating: {coating_txt}<br>Glass: {row.get('Glass Name','')}<br>Type: {row.get('Glass Type','')}<br>{x_axis}: {row[x_axis]}<br>{y_axis}: {row[y_axis]}"
 
                 fig_scatter.add_trace(go.Scatter(
                     x=[row[x_axis]],
                     y=[row[y_axis]],
-                    mode='markers+text' if (show_supplier or show_coating) else 'markers',
+                    mode=textmode,
                     marker=dict(
                         size=marker_sz,
                         color=marker_col,
@@ -302,12 +295,9 @@ if len(current_df) > 0:
                     name=""
                 ))
 
-            # Layout polish
+            # layout polish
             fig_scatter.update_layout(
-                title=dict(
-                    text=f"{y_axis} vs {x_axis}",
-                    font=dict(size=18, color=COLORS['TT_DarkBlue'])
-                ),
+                title=dict(text=f"{y_axis} vs {x_axis}", font=dict(size=18, color=COLORS['TT_DarkBlue'])),
                 xaxis_title=x_axis,
                 yaxis_title=y_axis,
                 hovermode='closest',
@@ -317,23 +307,10 @@ if len(current_df) > 0:
                 height=600,
                 margin=dict(t=80, b=80, l=80, r=80)
             )
+            fig_scatter.update_xaxes(showgrid=True, gridwidth=1, gridcolor=COLORS['TT_LightGrey'], linecolor=COLORS['TT_Grey'], linewidth=2)
+            fig_scatter.update_yaxes(showgrid=True, gridwidth=1, gridcolor=COLORS['TT_LightGrey'], linecolor=COLORS['TT_Grey'], linewidth=2)
 
-            fig_scatter.update_xaxes(
-                showgrid=True,
-                gridwidth=1,
-                gridcolor=COLORS['TT_LightGrey'],
-                linecolor=COLORS['TT_Grey'],
-                linewidth=2
-            )
-            fig_scatter.update_yaxes(
-                showgrid=True,
-                gridwidth=1,
-                gridcolor=COLORS['TT_LightGrey'],
-                linecolor=COLORS['TT_Grey'],
-                linewidth=2
-            )
-
-            # Display plot with download options
+            # Display and export
             config = {
                 'displayModeBar': True,
                 'displaylogo': False,
@@ -346,18 +323,10 @@ if len(current_df) > 0:
                 }
             }
             st.plotly_chart(fig_scatter, config=config)
-
-            # Export as interactive HTML
             html_str = fig_scatter.to_html(include_plotlyjs='cdn')
-            st.download_button(
-                label="📥 Download Interactive Plot (HTML)",
-                data=html_str,
-                file_name="scatter_plot.html",
-                mime="text/html"
-            )
+            st.download_button(label="📥 Download Interactive Plot (HTML)", data=html_str, file_name="scatter_plot.html", mime="text/html")
         else:
             st.warning("⚠️ No valid data points to plot. Please ensure numeric values are entered.")
-
 
     with tab2:
         st.subheader("Bar Chart Comparison Settings")
