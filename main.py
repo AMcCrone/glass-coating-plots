@@ -1,15 +1,17 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-import plotly.express as px
 
 # Company theme colors
 COLORS = {
-    'primary': '#0066CC',
-    'secondary': '#FF6B35',
-    'accent': '#004E89',
-    'light': '#F7F9FB',
-    'dark': '#1A1A1A'
+    'TT_Orange': 'rgb(211,69,29)',
+    'TT_Olive': 'rgb(139,144,100)',
+    'TT_LightBlue': 'rgb(136,219,223)',
+    'TT_MidBlue': 'rgb(0,163,173)',
+    'TT_DarkBlue': 'rgb(0,48,60)',
+    'TT_Grey': 'rgb(99,102,105)',
+    'TT_LightLightBlue': 'rgb(207,241,242)',
+    'TT_LightGrey': 'rgb(223,224,225)'
 }
 
 # Configure page
@@ -56,6 +58,13 @@ with st.sidebar:
     show_supplier = st.checkbox("Show Supplier Labels", value=True)
     show_coating = st.checkbox("Show Coating Labels", value=True)
     point_size = st.slider("Point Size", 5, 20, 10)
+    
+    st.subheader("Color Scheme")
+    point_color = st.selectbox(
+        "Point Color",
+        options=list(COLORS.keys()),
+        index=list(COLORS.keys()).index('TT_MidBlue')
+    )
 
 # Main content area
 st.header("📊 Data Entry")
@@ -121,7 +130,7 @@ column_config = {
 edited_df = st.data_editor(
     st.session_state.df,
     num_rows="dynamic",
-    use_container_width=True,
+    width="stretch",
     column_config=column_config,
     hide_index=True,
 )
@@ -165,12 +174,12 @@ if len(edited_df) > 0:
                 mode='markers+text',
                 marker=dict(
                     size=point_size,
-                    color=COLORS['primary'],
-                    line=dict(width=1, color=COLORS['dark'])
+                    color=COLORS[point_color],
+                    line=dict(width=1.5, color=COLORS['TT_DarkBlue'])
                 ),
                 text=annotation_text if (show_supplier or show_coating) else "",
                 textposition="top center",
-                textfont=dict(size=9),
+                textfont=dict(size=9, color=COLORS['TT_DarkBlue']),
                 hovertemplate=hover_text + "<extra></extra>",
                 showlegend=False,
                 name=""
@@ -178,22 +187,37 @@ if len(edited_df) > 0:
         
         # Update layout
         fig.update_layout(
-            title=f"{y_axis} vs {x_axis}",
+            title=dict(
+                text=f"{y_axis} vs {x_axis}",
+                font=dict(size=18, color=COLORS['TT_DarkBlue'])
+            ),
             xaxis_title=x_axis,
             yaxis_title=y_axis,
             hovermode='closest',
-            plot_bgcolor=COLORS['light'],
+            plot_bgcolor='white',
             paper_bgcolor='white',
-            font=dict(family="Arial, sans-serif", color=COLORS['dark']),
+            font=dict(family="Arial, sans-serif", color=COLORS['TT_DarkBlue']),
             height=600,
             margin=dict(t=80, b=80, l=80, r=80)
         )
         
-        fig.update_xaxis(showgrid=True, gridwidth=1, gridcolor='lightgray')
-        fig.update_yaxis(showgrid=True, gridwidth=1, gridcolor='lightgray')
+        fig.update_xaxis(
+            showgrid=True,
+            gridwidth=1,
+            gridcolor=COLORS['TT_LightGrey'],
+            linecolor=COLORS['TT_Grey'],
+            linewidth=2
+        )
+        fig.update_yaxis(
+            showgrid=True,
+            gridwidth=1,
+            gridcolor=COLORS['TT_LightGrey'],
+            linecolor=COLORS['TT_Grey'],
+            linewidth=2
+        )
         
         # Display plot
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
         
         # Export options
         col1, col2, col3 = st.columns(3)
