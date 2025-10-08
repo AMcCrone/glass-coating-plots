@@ -22,7 +22,7 @@ st.set_page_config(
 )
 
 # Title and description
-st.title("🔬 Glass Coating Analysis Tool")
+st.title("Glass Coating Analysis Tool")
 st.markdown("**Analyze and visualize glass coating performance metrics**")
 
 # Initialize session state for data
@@ -67,7 +67,7 @@ with st.sidebar:
     )
 
 # Main content area
-st.header("📊 Data Entry")
+st.header("Data Entry")
 
 # Data editor with proper column configuration
 column_config = {
@@ -139,7 +139,7 @@ edited_df = st.data_editor(
 st.session_state.df = edited_df
 
 # Plotting section
-st.header("📈 Visualization")
+st.header("Visualization")
 
 if len(edited_df) > 0:
     # Filter out rows with missing x or y values
