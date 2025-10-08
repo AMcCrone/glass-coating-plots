@@ -62,7 +62,7 @@ column_config = {
     "Glass Type": st.column_config.SelectboxColumn(
         "Glass Type",
         options=["Normal", "Mid-Iron", "Low Iron", "Ultra Clear"],
-        required=True
+        required=False
     ),
     "VLT (%)": st.column_config.NumberColumn("VLT (%)", min_value=0.0, max_value=100.0, step=0.1, format="%.1f"),
     "External Reflectance (%)": st.column_config.NumberColumn("External Reflectance (%)", min_value=0.0, max_value=100.0, step=0.1, format="%.1f"),
