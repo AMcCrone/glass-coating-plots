@@ -1,8 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-import plotly.io as pio
-from io import BytesIO
 
 # Company theme colors
 COLORS = {
@@ -35,7 +33,7 @@ st.set_page_config(
 )
 
 # Title and description
-st.title("Glass Coating Analysis Tool")
+st.title("🔬 Glass Coating Analysis Tool")
 st.markdown("**Analyze and visualize glass coating performance metrics**")
 
 # Initialize session state for data
@@ -57,7 +55,7 @@ if 'df' not in st.session_state:
     st.session_state.df = pd.DataFrame(sample_data, columns=columns)
 
 # Main content area - Data Entry
-st.header("Data Entry")
+st.header("📊 Data Entry")
 
 # Data editor with proper column configuration
 column_config = {
@@ -129,7 +127,7 @@ edited_df = st.data_editor(
 st.session_state.df = edited_df
 
 # Visualization section
-st.header("Visualization")
+st.header("📈 Visualization")
 
 if len(edited_df) > 0:
     # Get numeric columns
@@ -237,17 +235,27 @@ if len(edited_df) > 0:
                 linewidth=2
             )
             
-            # Display plot
-            config = {'displayModeBar': True, 'displaylogo': False}
+            # Display plot with download options
+            config = {
+                'displayModeBar': True, 
+                'displaylogo': False,
+                'toImageButtonOptions': {
+                    'format': 'svg',
+                    'filename': 'scatter_plot',
+                    'height': 600,
+                    'width': 1000,
+                    'scale': 1
+                }
+            }
             st.plotly_chart(fig_scatter, config=config)
             
-            # Export button
-            pdf_bytes = pio.to_image(fig_scatter, format='pdf')
+            # Export as interactive HTML
+            html_str = fig_scatter.to_html(include_plotlyjs='cdn')
             st.download_button(
-                label="📥 Download Plot as PDF",
-                data=pdf_bytes,
-                file_name="scatter_plot.pdf",
-                mime="application/pdf"
+                label="📥 Download Interactive Plot (HTML)",
+                data=html_str,
+                file_name="scatter_plot.html",
+                mime="text/html"
             )
         else:
             st.warning("⚠️ No valid data points to plot. Please ensure numeric values are entered.")
@@ -335,17 +343,27 @@ if len(edited_df) > 0:
                     linewidth=2
                 )
                 
-                # Display plot
-                config = {'displayModeBar': True, 'displaylogo': False}
+                # Display plot with download options
+                config = {
+                    'displayModeBar': True, 
+                    'displaylogo': False,
+                    'toImageButtonOptions': {
+                        'format': 'svg',
+                        'filename': 'bar_chart_comparison',
+                        'height': 600,
+                        'width': 1000,
+                        'scale': 1
+                    }
+                }
                 st.plotly_chart(fig_bar, config=config)
                 
-                # Export button
-                pdf_bytes = pio.to_image(fig_bar, format='pdf')
+                # Export as interactive HTML
+                html_str = fig_bar.to_html(include_plotlyjs='cdn')
                 st.download_button(
-                    label="📥 Download Plot as PDF",
-                    data=pdf_bytes,
-                    file_name="bar_chart_comparison.pdf",
-                    mime="application/pdf"
+                    label="📥 Download Interactive Plot (HTML)",
+                    data=html_str,
+                    file_name="bar_chart_comparison.html",
+                    mime="text/html"
                 )
             else:
                 st.warning("⚠️ No valid data for selected metrics.")
