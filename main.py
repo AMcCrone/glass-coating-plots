@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+import plotly.io as pio
+from io import BytesIO
 
 # Company theme colors
 COLORS = {
@@ -13,6 +15,17 @@ COLORS = {
     'TT_LightLightBlue': 'rgb(207,241,242)',
     'TT_LightGrey': 'rgb(223,224,225)'
 }
+
+# Color palette for different metrics
+METRIC_COLORS = [
+    COLORS['TT_MidBlue'],
+    COLORS['TT_Orange'],
+    COLORS['TT_Olive'],
+    COLORS['TT_LightBlue'],
+    COLORS['TT_Grey'],
+    'rgb(156,117,95)',
+    'rgb(186,176,172)'
+]
 
 # Configure page
 st.set_page_config(
@@ -43,30 +56,7 @@ if 'df' not in st.session_state:
     
     st.session_state.df = pd.DataFrame(sample_data, columns=columns)
 
-# Sidebar for configuration
-with st.sidebar:
-    st.header("⚙️ Configuration")
-    
-    st.subheader("Plot Settings")
-    numeric_cols = [col for col in st.session_state.df.columns if col not in 
-                    ["Supplier", "Glass Type", "Glass Name", "Coating Name"]]
-    
-    x_axis = st.selectbox("X-Axis", numeric_cols, index=numeric_cols.index("G-Value"))
-    y_axis = st.selectbox("Y-Axis", numeric_cols, index=numeric_cols.index("VLT (%)"))
-    
-    st.subheader("Display Options")
-    show_supplier = st.checkbox("Show Supplier Labels", value=True)
-    show_coating = st.checkbox("Show Coating Labels", value=True)
-    point_size = st.slider("Point Size", 5, 20, 10)
-    
-    st.subheader("Color Scheme")
-    point_color = st.selectbox(
-        "Point Color",
-        options=list(COLORS.keys()),
-        index=list(COLORS.keys()).index('TT_MidBlue')
-    )
-
-# Main content area
+# Main content area - Data Entry
 st.header("Data Entry")
 
 # Data editor with proper column configuration
@@ -138,105 +128,229 @@ edited_df = st.data_editor(
 # Update session state
 st.session_state.df = edited_df
 
-# Plotting section
+# Visualization section
 st.header("Visualization")
 
 if len(edited_df) > 0:
-    # Filter out rows with missing x or y values
-    plot_df = edited_df.dropna(subset=[x_axis, y_axis])
+    # Get numeric columns
+    numeric_cols = [col for col in edited_df.columns if col not in 
+                    ["Supplier", "Glass Type", "Glass Name", "Coating Name"]]
     
-    if len(plot_df) > 0:
-        # Create Plotly figure
-        fig = go.Figure()
-        
-        # Add scatter plot
-        for idx, row in plot_df.iterrows():
-            # Build hover text
-            hover_text = f"<b>{row['Supplier']}</b><br>"
-            hover_text += f"Coating: {row['Coating Name']}<br>"
-            hover_text += f"Glass: {row['Glass Name']}<br>"
-            hover_text += f"Type: {row['Glass Type']}<br>"
-            hover_text += f"{x_axis}: {row[x_axis]}<br>"
-            hover_text += f"{y_axis}: {row[y_axis]}"
-            
-            # Build annotation text
-            annotation_text = ""
-            if show_supplier:
-                annotation_text += f"<b>{row['Supplier']}</b>"
-            if show_coating:
-                if annotation_text:
-                    annotation_text += "<br>"
-                annotation_text += f"{row['Coating Name']}"
-            
-            fig.add_trace(go.Scatter(
-                x=[row[x_axis]],
-                y=[row[y_axis]],
-                mode='markers+text',
-                marker=dict(
-                    size=point_size,
-                    color=COLORS[point_color],
-                    line=dict(width=1.5, color=COLORS['TT_DarkBlue'])
-                ),
-                text=annotation_text if (show_supplier or show_coating) else "",
-                textposition="top center",
-                textfont=dict(size=9, color=COLORS['TT_DarkBlue']),
-                hovertemplate=hover_text + "<extra></extra>",
-                showlegend=False,
-                name=""
-            ))
-        
-        # Update layout
-        fig.update_layout(
-            title=dict(
-                text=f"{y_axis} vs {x_axis}",
-                font=dict(size=18, color=COLORS['TT_DarkBlue'])
-            ),
-            xaxis_title=x_axis,
-            yaxis_title=y_axis,
-            hovermode='closest',
-            plot_bgcolor='white',
-            paper_bgcolor='white',
-            font=dict(family="Arial, sans-serif", color=COLORS['TT_DarkBlue']),
-            height=600,
-            margin=dict(t=80, b=80, l=80, r=80)
-        )
-        
-        fig.update_xaxes(
-            showgrid=True,
-            gridwidth=1,
-            gridcolor=COLORS['TT_LightGrey'],
-            linecolor=COLORS['TT_Grey'],
-            linewidth=2
-        )
-        fig.update_yaxes(
-            showgrid=True,
-            gridwidth=1,
-            gridcolor=COLORS['TT_LightGrey'],
-            linecolor=COLORS['TT_Grey'],
-            linewidth=2
-        )
-        
-        # Display plot
-        st.plotly_chart(fig, width="stretch")
-        
-        # Export options
-        col1, col2, col3 = st.columns(3)
+    # Create tabs for different plot types
+    tab1, tab2 = st.tabs(["Scatter Plot", "Bar Chart Comparison"])
+    
+    # TAB 1: SCATTER PLOT
+    with tab1:
+        st.subheader("Scatter Plot Settings")
+        col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            # Export data as CSV
-            csv = edited_df.to_csv(index=False)
-            st.download_button(
-                label="📥 Download Data (CSV)",
-                data=csv,
-                file_name="glass_coating_data.csv",
-                mime="text/csv",
+            x_axis = st.selectbox("X-Axis", numeric_cols, index=numeric_cols.index("G-Value"), key="scatter_x")
+        with col2:
+            y_axis = st.selectbox("Y-Axis", numeric_cols, index=numeric_cols.index("VLT (%)"), key="scatter_y")
+        with col3:
+            show_supplier = st.checkbox("Show Supplier Labels", value=True)
+        with col4:
+            show_coating = st.checkbox("Show Coating Labels", value=True)
+        
+        col5, col6 = st.columns(2)
+        with col5:
+            point_size = st.slider("Point Size", 5, 20, 10)
+        with col6:
+            point_color = st.selectbox(
+                "Point Color",
+                options=list(COLORS.keys()),
+                index=list(COLORS.keys()).index('TT_MidBlue')
             )
         
-        with col2:
-            st.info("💡 Use the camera icon on the plot to save as PNG/SVG")
+        # Filter out rows with missing x or y values
+        plot_df = edited_df.dropna(subset=[x_axis, y_axis])
         
-    else:
-        st.warning("⚠️ No valid data points to plot. Please ensure numeric values are entered for selected axes.")
+        if len(plot_df) > 0:
+            # Create Plotly figure
+            fig_scatter = go.Figure()
+            
+            # Add scatter plot
+            for idx, row in plot_df.iterrows():
+                # Build hover text
+                hover_text = f"<b>{row['Supplier']}</b><br>"
+                hover_text += f"Coating: {row['Coating Name']}<br>"
+                hover_text += f"Glass: {row['Glass Name']}<br>"
+                hover_text += f"Type: {row['Glass Type']}<br>"
+                hover_text += f"{x_axis}: {row[x_axis]}<br>"
+                hover_text += f"{y_axis}: {row[y_axis]}"
+                
+                # Build annotation text
+                annotation_text = ""
+                if show_supplier:
+                    annotation_text += f"<b>{row['Supplier']}</b>"
+                if show_coating:
+                    if annotation_text:
+                        annotation_text += "<br>"
+                    annotation_text += f"{row['Coating Name']}"
+                
+                fig_scatter.add_trace(go.Scatter(
+                    x=[row[x_axis]],
+                    y=[row[y_axis]],
+                    mode='markers+text',
+                    marker=dict(
+                        size=point_size,
+                        color=COLORS[point_color],
+                        line=dict(width=1.5, color=COLORS['TT_DarkBlue'])
+                    ),
+                    text=annotation_text if (show_supplier or show_coating) else "",
+                    textposition="top center",
+                    textfont=dict(size=9, color=COLORS['TT_DarkBlue']),
+                    hovertemplate=hover_text + "<extra></extra>",
+                    showlegend=False,
+                    name=""
+                ))
+            
+            # Update layout
+            fig_scatter.update_layout(
+                title=dict(
+                    text=f"{y_axis} vs {x_axis}",
+                    font=dict(size=18, color=COLORS['TT_DarkBlue'])
+                ),
+                xaxis_title=x_axis,
+                yaxis_title=y_axis,
+                hovermode='closest',
+                plot_bgcolor='white',
+                paper_bgcolor='white',
+                font=dict(family="Arial, sans-serif", color=COLORS['TT_DarkBlue']),
+                height=600,
+                margin=dict(t=80, b=80, l=80, r=80)
+            )
+            
+            fig_scatter.update_xaxes(
+                showgrid=True,
+                gridwidth=1,
+                gridcolor=COLORS['TT_LightGrey'],
+                linecolor=COLORS['TT_Grey'],
+                linewidth=2
+            )
+            fig_scatter.update_yaxes(
+                showgrid=True,
+                gridwidth=1,
+                gridcolor=COLORS['TT_LightGrey'],
+                linecolor=COLORS['TT_Grey'],
+                linewidth=2
+            )
+            
+            # Display plot
+            config = {'displayModeBar': True, 'displaylogo': False}
+            st.plotly_chart(fig_scatter, config=config)
+            
+            # Export button
+            pdf_bytes = pio.to_image(fig_scatter, format='pdf')
+            st.download_button(
+                label="📥 Download Plot as PDF",
+                data=pdf_bytes,
+                file_name="scatter_plot.pdf",
+                mime="application/pdf"
+            )
+        else:
+            st.warning("⚠️ No valid data points to plot. Please ensure numeric values are entered.")
+    
+    # TAB 2: BAR CHART COMPARISON
+    with tab2:
+        st.subheader("Bar Chart Comparison Settings")
+        
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            metrics_to_compare = st.multiselect(
+                "Select Metrics to Compare",
+                options=numeric_cols,
+                default=[numeric_cols[0]] if len(numeric_cols) > 0 else []
+            )
+        with col2:
+            sort_by = st.selectbox(
+                "Sort By",
+                options=["Supplier"] + metrics_to_compare if metrics_to_compare else ["Supplier"],
+                index=0
+            )
+        
+        if metrics_to_compare:
+            # Prepare data for bar chart
+            bar_df = edited_df.dropna(subset=metrics_to_compare)
+            
+            if len(bar_df) > 0:
+                # Create bar chart
+                fig_bar = go.Figure()
+                
+                # Create labels for x-axis (Supplier + Coating)
+                bar_df['Label'] = bar_df['Supplier'] + '<br>' + bar_df['Coating Name']
+                
+                # Sort if needed
+                if sort_by != "Supplier":
+                    bar_df = bar_df.sort_values(by=sort_by, ascending=False)
+                
+                # Add bars for each metric
+                for i, metric in enumerate(metrics_to_compare):
+                    color = METRIC_COLORS[i % len(METRIC_COLORS)]
+                    
+                    fig_bar.add_trace(go.Bar(
+                        name=metric,
+                        x=bar_df['Label'],
+                        y=bar_df[metric],
+                        marker_color=color,
+                        text=bar_df[metric].round(2),
+                        textposition='outside',
+                        hovertemplate=f"<b>%{{x}}</b><br>{metric}: %{{y}}<extra></extra>"
+                    ))
+                
+                # Update layout
+                fig_bar.update_layout(
+                    title=dict(
+                        text="Performance Metrics Comparison",
+                        font=dict(size=18, color=COLORS['TT_DarkBlue'])
+                    ),
+                    xaxis_title="Product",
+                    yaxis_title="Value",
+                    barmode='group',
+                    plot_bgcolor='white',
+                    paper_bgcolor='white',
+                    font=dict(family="Arial, sans-serif", color=COLORS['TT_DarkBlue']),
+                    height=600,
+                    margin=dict(t=80, b=120, l=80, r=80),
+                    legend=dict(
+                        orientation="h",
+                        yanchor="bottom",
+                        y=1.02,
+                        xanchor="right",
+                        x=1
+                    )
+                )
+                
+                fig_bar.update_xaxes(
+                    showgrid=False,
+                    linecolor=COLORS['TT_Grey'],
+                    linewidth=2
+                )
+                fig_bar.update_yaxes(
+                    showgrid=True,
+                    gridwidth=1,
+                    gridcolor=COLORS['TT_LightGrey'],
+                    linecolor=COLORS['TT_Grey'],
+                    linewidth=2
+                )
+                
+                # Display plot
+                config = {'displayModeBar': True, 'displaylogo': False}
+                st.plotly_chart(fig_bar, config=config)
+                
+                # Export button
+                pdf_bytes = pio.to_image(fig_bar, format='pdf')
+                st.download_button(
+                    label="📥 Download Plot as PDF",
+                    data=pdf_bytes,
+                    file_name="bar_chart_comparison.pdf",
+                    mime="application/pdf"
+                )
+            else:
+                st.warning("⚠️ No valid data for selected metrics.")
+        else:
+            st.info("ℹ️ Select at least one metric to compare.")
 else:
     st.info("ℹ️ Add data to the table above to generate visualizations.")
 
