@@ -201,14 +201,14 @@ if len(edited_df) > 0:
             margin=dict(t=80, b=80, l=80, r=80)
         )
         
-        fig.update_xaxis(
+        fig.update_xaxes(
             showgrid=True,
             gridwidth=1,
             gridcolor=COLORS['TT_LightGrey'],
             linecolor=COLORS['TT_Grey'],
             linewidth=2
         )
-        fig.update_yaxis(
+        fig.update_yaxes(
             showgrid=True,
             gridwidth=1,
             gridcolor=COLORS['TT_LightGrey'],
