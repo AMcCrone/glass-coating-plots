@@ -618,11 +618,12 @@ if len(current_df) > 0:
                     )
                 )
             
-            # Create hover text with coating details
-            hover_texts = []
+            # Add labels for hover (using the name property and customdata)
+            # Create labels for each line
+            labels = []
             for idx, row in parallel_df.iterrows():
-                hover_text = f"<b>{row['Supplier']}</b><br>Coating: {row['Coating Name']}<br>Glass: {row.get('Glass Name', '')}"
-                hover_texts.append(hover_text)
+                label = f"{row['Supplier']} - {row['Coating Name']}"
+                labels.append(label)
             
             fig_parallel = go.Figure(data=
                 go.Parcoords(
@@ -635,9 +636,7 @@ if len(current_df) > 0:
                         cmin=0,
                         cmax=len(parallel_df)-1
                     ),
-                    dimensions=dimensions,
-                    customdata=hover_texts,
-                    hovertemplate='%{customdata}<extra></extra>'
+                    dimensions=dimensions
                 )
             )
             
