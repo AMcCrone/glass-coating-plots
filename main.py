@@ -124,7 +124,7 @@ if len(current_df) > 0:
     # TAB 1: SCATTER PLOT - Fixed version
     with tab1:
         st.subheader("Scatter Plot Settings")
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2, col3 = st.columns(3)
     
         with col1:
             default_x = "G-Value" if "G-Value" in numeric_cols else (numeric_cols[0] if numeric_cols else None)
@@ -133,30 +133,36 @@ if len(current_df) > 0:
             default_y = "VLT (%)" if "VLT (%)" in numeric_cols else (numeric_cols[0] if numeric_cols else None)
             y_axis = st.selectbox("Y-Axis", numeric_cols, index=numeric_cols.index(default_y) if default_y in numeric_cols else 0, key="scatter_y")
         with col3:
-            show_annotations = st.checkbox("Show annotations (supplier / coating)", value=True)
-        with col4:
-            show_supplier = st.checkbox("Show Supplier (line 1)", value=True)
-            show_coating = st.checkbox("Show Coating (line 2)", value=True)
+            show_supplier = st.checkbox("Show Supplier", value=True)
+            show_coating = st.checkbox("Show Coating", value=True)
     
         point_size = 15
         point_color = COLORS['TT_Orange']
     
-        # Only show target controls if plotting G-Value vs VLT (%)
-        is_g_vlt_plot = (x_axis == "G-Value" and y_axis == "VLT (%)") or (x_axis == "VLT (%)" and y_axis == "G-Value")
+        # Target controls - always show
+        st.markdown("**Target lines & highlight zone**")
+        tcol1, tcol2, tcol3 = st.columns([1, 1, 1])
+        with tcol1:
+            show_targets = st.checkbox("Show target lines / highlight zone", value=False)
+        with tcol2:
+            x_target = st.number_input(f"{x_axis} target", 
+                                      min_value=0.0, 
+                                      max_value=100.0 if "(%)" in x_axis else 10.0,
+                                      step=0.01 if x_axis in ["G-Value", "U-Value (W/m²K)"] else 0.1,
+                                      value=0.35 if x_axis == "G-Value" else (60.0 if x_axis == "VLT (%)" else 10.0),
+                                      key="x_target_input")
+        with tcol3:
+            y_target = st.number_input(f"{y_axis} target",
+                                      min_value=0.0,
+                                      max_value=100.0 if "(%)" in y_axis else 10.0,
+                                      step=0.01 if y_axis in ["G-Value", "U-Value (W/m²K)"] else 0.1,
+                                      value=60.0 if y_axis == "VLT (%)" else (0.35 if y_axis == "G-Value" else 10.0),
+                                      key="y_target_input")
         
-        if is_g_vlt_plot:
-            st.markdown("**Target lines & highlight zone**")
-            tcol1, tcol2, tcol3 = st.columns([1, 1, 1])
-            with tcol1:
-                show_targets = st.checkbox("Show target lines / highlight zone", value=False)
-            with tcol2:
-                g_target = st.number_input("G-Value target", min_value=0.0, max_value=1.0, step=0.01, value=0.35, key="g_target_input")
-            with tcol3:
-                vlt_target = st.number_input("VLT (%) target", min_value=0.0, max_value=100.0, step=0.1, value=60.0, key="vlt_target_input")
-        else:
-            show_targets = False
-            g_target = None
-            vlt_target = None
+        # Define which metrics should be "larger than" target vs "less than" target
+        larger_than_metrics = ["VLT (%)", "Color Rendering Index"]
+        less_than_metrics = ["External Reflectance (%)", "Internal Reflectance (%)", 
+                           "G-Value", "U-Value (W/m²K)", "Embodied Carbon (kgCO2e/m²)"]
     
         plot_df = current_df.dropna(subset=[x_axis, y_axis]).reset_index(drop=True)
         if len(plot_df) == 0:
@@ -173,17 +179,30 @@ if len(current_df) > 0:
     
             fig_scatter = go.Figure()
     
-            # Draw target zone and lines only for G-Value vs VLT plots
-            if is_g_vlt_plot and show_targets and (g_target is not None or vlt_target is not None):
-                # Determine rectangle coordinates based on axis arrangement
-                if x_axis == "G-Value" and y_axis == "VLT (%)":
-                    x0_rect, x1_rect = 0.0, float(g_target)
-                    y0_rect, y1_rect = float(vlt_target), 100.0
-                else:  # x_axis == "VLT (%)" and y_axis == "G-Value"
-                    x0_rect, x1_rect = float(vlt_target), 100.0
-                    y0_rect, y1_rect = 0.0, float(g_target)
+            # Draw target zone and lines if enabled
+            if show_targets:
+                # Determine target zone based on metric types
+                # X-axis zone
+                if x_axis in larger_than_metrics:
+                    # Good zone is >= x_target
+                    x0_rect = float(x_target)
+                    x1_rect = x_max + margin_x
+                else:  # x_axis in less_than_metrics
+                    # Good zone is <= x_target
+                    x0_rect = x_min - margin_x
+                    x1_rect = float(x_target)
                 
-                # Draw highlight rectangle
+                # Y-axis zone
+                if y_axis in larger_than_metrics:
+                    # Good zone is >= y_target
+                    y0_rect = float(y_target)
+                    y1_rect = y_max + margin_y
+                else:  # y_axis in less_than_metrics
+                    # Good zone is <= y_target
+                    y0_rect = y_min - margin_y
+                    y1_rect = float(y_target)
+                
+                # Draw highlight rectangle (intersection of good zones)
                 fig_scatter.add_shape(
                     type="rect",
                     x0=x0_rect, x1=x1_rect,
@@ -194,37 +213,23 @@ if len(current_df) > 0:
                     xref='x', yref='y'
                 )
                 
-                # Draw target lines
-                if x_axis == "G-Value":
-                    fig_scatter.add_shape(
-                        type="line",
-                        x0=float(g_target), x1=float(g_target),
-                        y0=y_min - margin_y, y1=y_max + margin_y,
-                        line=dict(color=COLORS['TT_MidBlue'], width=2, dash='dash'),
-                        xref='x', yref='y'
-                    )
-                    fig_scatter.add_shape(
-                        type="line",
-                        x0=x_min - margin_x, x1=x_max + margin_x,
-                        y0=float(vlt_target), y1=float(vlt_target),
-                        line=dict(color=COLORS['TT_MidBlue'], width=2, dash='dash'),
-                        xref='x', yref='y'
-                    )
-                else:  # x_axis == "VLT (%)"
-                    fig_scatter.add_shape(
-                        type="line",
-                        x0=float(vlt_target), x1=float(vlt_target),
-                        y0=y_min - margin_y, y1=y_max + margin_y,
-                        line=dict(color=COLORS['TT_MidBlue'], width=2, dash='dash'),
-                        xref='x', yref='y'
-                    )
-                    fig_scatter.add_shape(
-                        type="line",
-                        x0=x_min - margin_x, x1=x_max + margin_x,
-                        y0=float(g_target), y1=float(g_target),
-                        line=dict(color=COLORS['TT_MidBlue'], width=2, dash='dash'),
-                        xref='x', yref='y'
-                    )
+                # Draw vertical target line for x-axis
+                fig_scatter.add_shape(
+                    type="line",
+                    x0=float(x_target), x1=float(x_target),
+                    y0=y_min - margin_y, y1=y_max + margin_y,
+                    line=dict(color=COLORS['TT_MidBlue'], width=2, dash='dash'),
+                    xref='x', yref='y'
+                )
+                
+                # Draw horizontal target line for y-axis
+                fig_scatter.add_shape(
+                    type="line",
+                    x0=x_min - margin_x, x1=x_max + margin_x,
+                    y0=float(y_target), y1=float(y_target),
+                    line=dict(color=COLORS['TT_MidBlue'], width=2, dash='dash'),
+                    xref='x', yref='y'
+                )
     
             label_positions = [
                 "top center", "bottom center", "middle left", "middle right",
@@ -235,15 +240,17 @@ if len(current_df) > 0:
                 supplier_txt = str(row.get('Supplier', ''))
                 coating_txt = str(row.get('Coating Name', ''))
                 
-                if show_annotations:
-                    line1 = supplier_txt if show_supplier else ""
-                    line2 = coating_txt if show_coating else ""
-                    annotation_text = f"{line1}<br>{line2}"
-                else:
-                    annotation_text = ""
-    
-                textmode = 'markers+text' if (show_annotations and (show_supplier or show_coating)) else 'markers'
-                textpos = label_positions[idx % len(label_positions)] if (show_annotations and (show_supplier or show_coating)) else ""
+                # Build annotation text based on checkboxes
+                annotation_lines = []
+                if show_supplier:
+                    annotation_lines.append(supplier_txt)
+                if show_coating:
+                    annotation_lines.append(coating_txt)
+                
+                annotation_text = "<br>".join(annotation_lines) if annotation_lines else ""
+                
+                textmode = 'markers+text' if annotation_text else 'markers'
+                textpos = label_positions[idx % len(label_positions)] if annotation_text else ""
     
                 hover_text = (
                     f"<b>{supplier_txt}</b><br>Coating: {coating_txt}<br>"
@@ -329,13 +336,12 @@ if len(current_df) > 0:
                     # Get actual values
                     actual_values = bar_df[metric]
                     
-                    # Normalize to 0-1 range
-                    min_val = actual_values.min()
+                    # Normalize from 0 to max value (not min to max)
                     max_val = actual_values.max()
-                    if max_val > min_val:
-                        normalized = (actual_values - min_val) / (max_val - min_val)
+                    if max_val > 0:
+                        normalized = actual_values / max_val
                     else:
-                        normalized = pd.Series([1.0] * len(actual_values))
+                        normalized = pd.Series([0.0] * len(actual_values))
                     
                     # Create text labels showing actual values
                     text_labels = [f"{val:.2f}" if val < 10 else f"{val:.1f}" for val in actual_values]
