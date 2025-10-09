@@ -52,7 +52,7 @@ def sync_editor_to_df():
 
 # ------------------ Data Entry UI ------------------
 st.header("Data Entry")
-st.markdown("Edit the table below. Edits are synced to session state automatically (via on_change).")
+st.markdown("Edit the table below.")
 
 column_config = {
     "Glass Type": st.column_config.SelectboxColumn(
