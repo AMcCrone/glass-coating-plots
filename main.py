@@ -119,7 +119,7 @@ if len(current_df) > 0:
     numeric_cols = [col for col in current_df.columns if col not in
                     ["Supplier", "Glass Type", "Glass Name", "Coating Name"]]
 
-    tab1, tab2, tab3 = st.tabs(["Scatter Plot", "Bar Chart Comparison", "Radial Plots"])
+    tab1, tab2, tab3, tab4 = st.tabs(["Scatter Plot", "Bar Chart Comparison", "Radial Plots", "Parallel Coordinates Plot"])
 
     # TAB 1: SCATTER PLOT - Fixed version
     with tab1:
