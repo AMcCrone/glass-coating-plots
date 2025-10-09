@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+from auth import authenticate_user
+
+authenticate_user()
 
 # Company theme colors
 COLORS = {
