@@ -193,5 +193,3 @@ def create_scatter_plot(current_df, numeric_cols, COLORS, METRIC_COLORS):
         }
     }
     st.plotly_chart(fig_scatter, config=config)
-    html_str = fig_scatter.to_html(include_plotlyjs='cdn')
-    st.download_button(label="📥 Download Interactive Plot (HTML)", data=html_str, file_name="scatter_plot.html", mime="text/html")
