@@ -38,12 +38,37 @@ if 'df' not in st.session_state:
         "VLT (%)", "External Reflectance (%)", "Internal Reflectance (%)",
         "G-Value", "U-Value (W/m²K)", "Color Rendering Index", "Embodied Carbon (kgCO2e/m²)"
     ]
+
     sample_data = [
-        ["AGC EU", "Low Iron", "Planibel ClearVision", "ipasol neutral 70/37",
-         59.0, 11.0, 11.0, 0.34, 1.3, 95.0, 45.0],
-        ["Guardian ME", "Ultra Clear", "Guardian UltraClear", "SN 70 T",
-         63.0, 12.0, 12.0, 0.38, 1.3, 97.0, 42.0],
+        # AGC Interpane (double-glazing examples from AGC PDF)
+        ["AGC Interpane", "Clear Float", "ipasol neutral", "ipasol neutral 72/42 (6/16/4 Ar)",
+         72.0, 11.0, 1.0, 0.48, 1.0, 96.0, 42.0],
+        ["AGC Interpane", "Clear Float", "ipasol ultraselect", "ipasol ultraselect 67/32 (6/16/4 Ar)",
+         67.0, 10.0, 1.0, 0.37, 1.0, 94.0, 42.0],
+        ["AGC Interpane", "Clear Float", "ipasol ultraselect", "ipasol ultraselect 62/29 (6/16/4 Ar)",
+         62.0, 9.0, 1.0, 0.34, 1.0, 93.0, 42.0],
+        ["AGC Interpane", "Planibel", "Energy", "Energy 70/37 (6/16/4 Ar)",
+         70.0, 12.0, 1.0, 0.43, 1.0, 96.0, 40.0],
+        ["AGC Interpane", "Planibel", "Stopray", "Stopray Vision 70/35 (6/16/4 Ar)",
+         70.0, 14.0, 1.0, 0.40, 1.0, 97.0, 44.0],
+        ["AGC Interpane", "Planibel", "ipasol platin", "ipasol platin 52/36 (6/16/4 Ar)",
+         52.0, 30.0, 1.0, 0.42, 1.1, 97.0, 48.0],
+
+        # Saint-Gobain — COOL-LITE SKN series (values read from your supplied image)
+        ["Saint-Gobain", "Clear/Coated", "COOL-LITE SKN", "SKN 183 II",
+         75.0, 12.0, 34.0, 0.40, 1.0, 95.0, 50.0],
+        ["Saint-Gobain", "Clear/Coated", "COOL-LITE SKN", "SKN 176 II",
+         70.0, 13.0, 32.0, 0.37, 1.0, 95.0, 50.0],
+        ["Saint-Gobain", "Clear/Coated", "COOL-LITE SKN", "SKN 175 II",
+         70.0, 14.0, 37.0, 0.35, 1.0, 96.0, 50.0],
+        ["Saint-Gobain", "Clear/Coated", "COOL-LITE SKN", "SKN 165 II",
+         61.0, 16.0, 34.0, 0.34, 1.0, 95.0, 50.0],
+        ["Saint-Gobain", "Clear/Coated", "COOL-LITE SKN", "SKN 154 II",
+         52.0, 18.0, 30.0, 0.28, 1.0, 95.0, 50.0],
+        ["Saint-Gobain", "Clear/Coated", "COOL-LITE SKN", "SKN 144 II",
+         42.0, 20.0, 31.0, 0.23, 1.1, 95.0, 50.0],
     ]
+
     st.session_state.df = pd.DataFrame(sample_data, columns=columns)
 
 EDITOR_KEY = "editor_df"
