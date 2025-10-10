@@ -144,5 +144,3 @@ def create_radial_plots(current_df, numeric_cols, COLORS, METRIC_COLORS):
                 }
             }
             st.plotly_chart(fig_radial, config=config, use_container_width=True)
-    
-    st.markdown("---")
