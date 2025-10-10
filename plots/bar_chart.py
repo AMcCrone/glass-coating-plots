@@ -96,5 +96,3 @@ def create_bar_chart(current_df, numeric_cols, COLORS, METRIC_COLORS):
         }
     }
     st.plotly_chart(fig_bar, config=config)
-    html_str = fig_bar.to_html(include_plotlyjs='cdn')
-    st.download_button(label="📥 Download Interactive Plot (HTML)", data=html_str, file_name="bar_chart_comparison.html", mime="text/html")
