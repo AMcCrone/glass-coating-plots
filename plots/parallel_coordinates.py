@@ -153,12 +153,3 @@ def create_parallel_coordinates(current_df, numeric_cols, COLORS, METRIC_COLORS)
         }
     }
     st.plotly_chart(fig_parallel, config=config, use_container_width=True)
-    
-    html_str = fig_parallel.to_html(include_plotlyjs='cdn')
-    st.download_button(
-        label="📥 Download Parallel Coordinates Plot (HTML)",
-        data=html_str,
-        file_name="parallel_coordinates.html",
-        mime="text/html",
-        key="download_parallel"
-    )
