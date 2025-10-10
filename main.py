@@ -58,11 +58,6 @@ st.header("Data Entry")
 st.markdown("Edit the table below.")
 
 column_config = {
-    "Glass Type": st.column_config.SelectboxColumn(
-        "Glass Type",
-        options=["Normal", "Mid-Iron", "Low Iron", "Ultra Clear"],
-        required=False
-    ),
     "VLT (%)": st.column_config.NumberColumn("VLT (%)", min_value=0.0, max_value=100.0, step=0.1, format="%.1f"),
     "External Reflectance (%)": st.column_config.NumberColumn("External Reflectance (%)", min_value=0.0, max_value=100.0, step=0.1, format="%.1f"),
     "Internal Reflectance (%)": st.column_config.NumberColumn("Internal Reflectance (%)", min_value=0.0, max_value=100.0, step=0.1, format="%.1f"),
