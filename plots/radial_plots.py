@@ -144,14 +144,5 @@ def create_radial_plots(current_df, numeric_cols, COLORS, METRIC_COLORS):
                 }
             }
             st.plotly_chart(fig_radial, config=config, use_container_width=True)
-            
-            html_str = fig_radial.to_html(include_plotlyjs='cdn')
-            st.download_button(
-                label=f"📥 Download HTML", 
-                data=html_str, 
-                file_name=f"radial_plot_{supplier.replace(' ', '_')}.html", 
-                mime="text/html",
-                key=f"download_radial_{supplier}"
-            )
     
     st.markdown("---")
