@@ -1,5 +1,86 @@
 import streamlit as st
 import plotly.graph_objects as go
+import numpy as np
+
+
+def adjust_label_positions(plot_df, x_axis, y_axis, x_range, y_range):
+    """
+    Adjust label positions to avoid overlaps using a simple collision detection algorithm.
+    
+    Returns a list of adjusted positions for each point.
+    """
+    positions = []
+    occupied_zones = []  # Store (x_center, y_center, width, height) for each label
+    
+    # Normalize coordinates for collision detection
+    x_vals = plot_df[x_axis].values
+    y_vals = plot_df[y_axis].values
+    
+    # Label zones (relative to point, in normalized space)
+    position_offsets = {
+        "top center": (0, 0.08),
+        "bottom center": (0, -0.08),
+        "middle left": (-0.12, 0),
+        "middle right": (0.12, 0),
+        "top left": (-0.10, 0.06),
+        "top right": (0.10, 0.06),
+        "bottom left": (-0.10, -0.06),
+        "bottom right": (0.10, -0.06)
+    }
+    
+    position_priority = [
+        "top right", "top left", "bottom right", "bottom left",
+        "top center", "middle right", "middle left", "bottom center"
+    ]
+    
+    def normalize_coords(x, y):
+        """Normalize coordinates to 0-1 range"""
+        x_norm = (x - x_vals.min()) / x_range if x_range > 0 else 0.5
+        y_norm = (y - y_vals.min()) / y_range if y_range > 0 else 0.5
+        return x_norm, y_norm
+    
+    def check_overlap(x, y, offset_x, offset_y):
+        """Check if a label at this position would overlap with existing labels"""
+        label_width = 0.15  # Approximate label width in normalized space
+        label_height = 0.10  # Approximate label height in normalized space
+        
+        for occupied in occupied_zones:
+            occ_x, occ_y, occ_w, occ_h = occupied
+            # Check for rectangle overlap
+            if (abs(x + offset_x - occ_x) < (label_width + occ_w) / 2 and
+                abs(y + offset_y - occ_y) < (label_height + occ_h) / 2):
+                return True
+        return False
+    
+    for idx, row in plot_df.iterrows():
+        x_norm, y_norm = normalize_coords(row[x_axis], row[y_axis])
+        
+        # Try each position in order of priority
+        chosen_position = "top center"  # default
+        for pos in position_priority:
+            offset_x, offset_y = position_offsets[pos]
+            if not check_overlap(x_norm, y_norm, offset_x, offset_y):
+                chosen_position = pos
+                occupied_zones.append((
+                    x_norm + offset_x,
+                    y_norm + offset_y,
+                    0.15,  # width
+                    0.10   # height
+                ))
+                break
+        else:
+            # If all positions overlap, use default and still mark as occupied
+            offset_x, offset_y = position_offsets[chosen_position]
+            occupied_zones.append((
+                x_norm + offset_x,
+                y_norm + offset_y,
+                0.15,
+                0.10
+            ))
+        
+        positions.append(chosen_position)
+    
+    return positions
 
 
 def create_scatter_plot(current_df, numeric_cols, COLORS, METRIC_COLORS):
@@ -117,11 +198,11 @@ def create_scatter_plot(current_df, numeric_cols, COLORS, METRIC_COLORS):
             xref='x', yref='y'
         )
 
-    label_positions = [
-        "top center", "bottom center", "middle left", "middle right",
-        "top left", "top right", "bottom left", "bottom right"
-    ]
-
+    # Get optimized label positions to avoid overlaps
+    show_labels = show_supplier or show_coating
+    if show_labels:
+        label_positions = adjust_label_positions(plot_df, x_axis, y_axis, x_range, y_range)
+    
     for idx, row in plot_df.iterrows():
         supplier_txt = str(row.get('Supplier', ''))
         coating_txt = str(row.get('Coating Name', ''))
@@ -135,8 +216,13 @@ def create_scatter_plot(current_df, numeric_cols, COLORS, METRIC_COLORS):
         
         annotation_text = "<br>".join(annotation_lines) if annotation_lines else ""
         
-        textmode = 'markers+text' if annotation_text else 'markers'
-        textpos = label_positions[idx % len(label_positions)] if annotation_text else ""
+        # Fix: Only set text mode and position if we have text to display
+        if annotation_text:
+            textmode = 'markers+text'
+            textpos = label_positions[idx]
+        else:
+            textmode = 'markers'
+            textpos = None  # Don't set textposition when there's no text
 
         hover_text = (
             f"<b>{supplier_txt}</b><br>Coating: {coating_txt}<br>"
@@ -144,18 +230,23 @@ def create_scatter_plot(current_df, numeric_cols, COLORS, METRIC_COLORS):
             f"{x_axis}: {row[x_axis]}<br>{y_axis}: {row[y_axis]}"
         )
 
-        fig_scatter.add_trace(go.Scatter(
-            x=[row[x_axis]],
-            y=[row[y_axis]],
-            mode=textmode,
-            marker=dict(size=point_size, color=point_color, line=dict(width=1.2, color=COLORS['TT_DarkBlue'])),
-            text=annotation_text,
-            textposition=textpos,
-            textfont=dict(size=9, color=COLORS['TT_DarkBlue']),
-            hovertemplate=hover_text + "<extra></extra>",
-            showlegend=False,
-            name=""
-        ))
+        trace_params = {
+            'x': [row[x_axis]],
+            'y': [row[y_axis]],
+            'mode': textmode,
+            'marker': dict(size=point_size, color=point_color, line=dict(width=1.2, color=COLORS['TT_DarkBlue'])),
+            'hovertemplate': hover_text + "<extra></extra>",
+            'showlegend': False,
+            'name': ""
+        }
+        
+        # Only add text-related parameters if we have text
+        if annotation_text:
+            trace_params['text'] = annotation_text
+            trace_params['textposition'] = textpos
+            trace_params['textfont'] = dict(size=9, color=COLORS['TT_DarkBlue'])
+        
+        fig_scatter.add_trace(go.Scatter(**trace_params))
 
     # Set axis ranges with padding
     x_axis_min = x_min - margin_x
