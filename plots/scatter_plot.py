@@ -105,6 +105,7 @@ def create_scatter_plot(current_df, numeric_cols, COLORS, METRIC_COLORS):
     with col3:
         show_supplier = st.checkbox("Show Supplier", value=True)
         show_coating = st.checkbox("Show Coating", value=True)
+        show_row_number = st.checkbox("Show Row Number", value=False)
 
     point_size = 15
     point_color = COLORS['TT_Orange']
@@ -199,16 +200,19 @@ def create_scatter_plot(current_df, numeric_cols, COLORS, METRIC_COLORS):
         )
 
     # Get optimized label positions to avoid overlaps
-    show_labels = show_supplier or show_coating
+    show_labels = show_supplier or show_coating or show_row_number
     if show_labels:
         label_positions = adjust_label_positions(plot_df, x_axis, y_axis, x_range, y_range)
     
     for idx, row in plot_df.iterrows():
         supplier_txt = str(row.get('Supplier', ''))
         coating_txt = str(row.get('Coating Name', ''))
+        row_number = idx + 1  # 1-based indexing for display
         
         # Build annotation text
         annotation_lines = []
+        if show_row_number:
+            annotation_lines.append(f"#{row_number}")
         if show_supplier:
             annotation_lines.append(supplier_txt)
         if show_coating:
